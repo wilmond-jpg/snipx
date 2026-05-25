@@ -1,0 +1,178 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-sonnet-4-5",
+  "small_model": "anthropic/claude-haiku-4-5",
+  "default_agent": "build",
+  "instructions": [
+    "AGENTS.md",
+    "README.md",
+    "../everything-claude-code/skills/tdd-workflow/SKILL.md",
+    "../everything-claude-code/skills/security-review/SKILL.md",
+    "../everything-claude-code/skills/coding-standards/SKILL.md",
+    "../everything-claude-code/skills/frontend-patterns/SKILL.md",
+    "../everything-claude-code/skills/backend-patterns/SKILL.md",
+    "../everything-claude-code/skills/verification-loop/SKILL.md",
+    "../everything-claude-code/.opencode/instructions/INSTRUCTIONS.md"
+  ],
+  "agent": {
+    "build": {
+      "description": "Primary coding agent for snipx development (Tauri + React)",
+      "mode": "primary",
+      "model": "anthropic/claude-sonnet-4-5",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "read": true,
+        "changed-files": true
+      }
+    },
+    "planner": {
+      "description": "Expert planning specialist for complex features and refactoring in snipx",
+      "mode": "subagent",
+      "model": "anthropic/claude-opus-4-5",
+      "prompt": "{file:prompts/agents/planner.txt}",
+      "tools": {
+        "read": true,
+        "bash": true,
+        "write": false,
+        "edit": false
+      }
+    },
+    "architect": {
+      "description": "Software architecture specialist for snipx system design",
+      "mode": "subagent",
+      "model": "anthropic/claude-opus-4-5",
+      "prompt": "{file:prompts/agents/architect.txt}",
+      "tools": {
+        "read": true,
+        "bash": true,
+        "write": false,
+        "edit": false
+      }
+    },
+    "rust-reviewer": {
+      "description": "Expert Rust code reviewer for snipx Tauri backend — ownership, lifetimes, concurrency, safety",
+      "mode": "subagent",
+      "model": "anthropic/claude-opus-4-5",
+      "prompt": "{file:prompts/agents/rust-reviewer.txt}",
+      "tools": {
+        "read": true,
+        "bash": true,
+        "write": false,
+        "edit": false
+      }
+    },
+    "rust-build-resolver": {
+      "description": "Rust build, Cargo, and compilation error fixer for snipx Tauri backend",
+      "mode": "subagent",
+      "model": "anthropic/claude-opus-4-5",
+      "prompt": "{file:prompts/agents/rust-build-resolver.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true
+      }
+    },
+    "code-reviewer": {
+      "description": "General code review specialist for snipx — quality, maintainability, patterns",
+      "mode": "subagent",
+      "model": "anthropic/claude-opus-4-5",
+      "prompt": "{file:prompts/agents/code-reviewer.txt}",
+      "tools": {
+        "read": true,
+        "bash": true,
+        "write": false,
+        "edit": false
+      }
+    },
+    "build-error-resolver": {
+      "description": "Build and TypeScript error resolution for snipx frontend",
+      "mode": "subagent",
+      "model": "anthropic/claude-opus-4-5",
+      "prompt": "{file:prompts/agents/build-error-resolver.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true
+      }
+    },
+    "security-reviewer": {
+      "description": "Security vulnerability detection for snipx — macOS permissions, input handling, data safety",
+      "mode": "subagent",
+      "model": "anthropic/claude-opus-4-5",
+      "prompt": "{file:prompts/agents/security-reviewer.txt}",
+      "tools": {
+        "read": true,
+        "bash": true,
+        "write": true,
+        "edit": true
+      }
+    },
+    "tdd-guide": {
+      "description": "Test-Driven Development specialist for snipx — write tests first, 80%+ coverage",
+      "mode": "subagent",
+      "model": "anthropic/claude-opus-4-5",
+      "prompt": "{file:prompts/agents/tdd-guide.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true
+      }
+    }
+  },
+  "command": {
+    "plan": {
+      "description": "Create a detailed implementation plan for snipx features",
+      "template": "Create a detailed implementation plan for: $ARGUMENTS. Break into phases with risks, dependencies, and complexity.",
+      "agent": "planner",
+      "subtask": true
+    },
+    "code-review": {
+      "description": "Review snipx code for quality, security, and maintainability",
+      "template": "Review the recent code changes in snipx for quality, security, and maintainability: $ARGUMENTS",
+      "agent": "code-reviewer",
+      "subtask": true
+    },
+    "rust-review": {
+      "description": "Review Rust/Tauri backend code in snipx",
+      "template": "Review the Rust backend changes in snipx: $ARGUMENTS",
+      "agent": "rust-reviewer",
+      "subtask": true
+    },
+    "build-fix": {
+      "description": "Fix build and compilation errors in snipx",
+      "template": "Fix build errors in: $ARGUMENTS",
+      "agent": "build-error-resolver",
+      "subtask": true
+    },
+    "rust-build-fix": {
+      "description": "Fix Rust/Cargo build errors in snipx",
+      "template": "Fix Rust build errors in: $ARGUMENTS",
+      "agent": "rust-build-resolver",
+      "subtask": true
+    },
+    "security": {
+      "description": "Run security review on snipx (macOS permissions, data handling)",
+      "template": "Review security of: $ARGUMENTS",
+      "agent": "security-reviewer",
+      "subtask": true
+    },
+    "tdd": {
+      "description": "Enforce TDD workflow for snipx development",
+      "template": "Enforce TDD workflow for: $ARGUMENTS",
+      "agent": "tdd-guide",
+      "subtask": true
+    },
+    "verify": {
+      "description": "Run verification loop — build, lint, test",
+      "template": "Run verification: cargo check && cargo clippy && npm run typecheck. Report all issues found."
+    }
+  },
+  "permission": {
+    "mcp_*": "ask"
+  }
+}

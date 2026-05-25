@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: var(--c-surface);
+  --color-elevated: var(--c-elevated);
+  --color-card: var(--c-card);
+  --color-card-hover: var(--c-card-hover);
+  --color-primary: var(--c-primary);
+  --color-secondary: var(--c-secondary);
+  --color-muted: var(--c-muted);
+  --color-border: var(--c-border);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-elevated: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-modal: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+  --animate-fade-in-up: fade-in-up 0.25s ease-out;
+}
+
+:root, [data-theme="dark"] {
+  --c-surface: #09090b;
+  --c-elevated: #18181b;
+  --c-card: #27272a;
+  --c-card-hover: #3f3f46;
+  --c-primary: #f4f4f5;
+  --c-secondary: #a1a1aa;
+  --c-muted: #71717a;
+  --c-border: #27272a;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+[data-theme="light"] {
+  --c-surface: #fafafa;
+  --c-elevated: #ffffff;
+  --c-card: #f4f4f5;
+  --c-card-hover: #e4e4e7;
+  --c-primary: #09090b;
+  --c-secondary: #71717a;
+  --c-muted: #a1a1aa;
+  --c-border: #d4d4d8;
+}
