@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import * as backend from "../backend";
+import { invoke } from "@tauri-apps/api/core";
 import type { Settings } from "../types";
 import Toggle from "./ui/Toggle";
 import Button from "./ui/Button";
@@ -30,7 +30,7 @@ export default function SettingsPage({
   }, [accessibilityGranted]);
 
   useEffect(() => {
-    backend.checkAccessibility().then(setAccessibility).catch(() => {});
+    invoke<boolean>("check_accessibility").then(setAccessibility).catch(() => {});
   }, []);
 
   const update = (partial: Partial<Settings>) => {
@@ -38,14 +38,14 @@ export default function SettingsPage({
     onSettingsChange(updated);
     setSaving(true);
     Promise.all([
-      backend.saveSettings(updated),
-      ...(partial.theme ? [backend.setWindowTheme(partial.theme)] : []),
+      invoke("save_settings", { settings: updated }),
+      ...(partial.theme ? [invoke("set_window_theme", { theme: partial.theme })] : []),
     ]).catch(console.error).finally(() => setSaving(false));
   };
 
   const handleExport = async () => {
     try {
-      const json = await backend.exportSnippets();
+      const json = await invoke<string>("export_snippets");
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -63,7 +63,7 @@ export default function SettingsPage({
     if (!file) return;
     try {
       const text = await file.text();
-      await backend.importSnippets(text);
+      await invoke("import_snippets", { json: text });
       showToast?.("Snippets imported successfully", "success");
       onImportDone();
     } catch (err) {

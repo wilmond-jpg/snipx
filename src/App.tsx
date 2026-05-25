@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import * as backend from "./backend";
+import { invoke } from "@tauri-apps/api/core";
 import type { Snippet, Settings } from "./types";
 import Sidebar from "./components/Sidebar";
 import SnippetList from "./components/SnippetList";
@@ -40,8 +40,12 @@ function App() {
   }, [settings.theme]);
 
   useEffect(() => {
-    backend.getSettings().then(setSettings);
-    backend.checkAccessibility().then(setAccessibilityGranted);
+    invoke<Settings>("get_settings")
+      .then((s) => setSettings(s))
+      .catch(() => {});
+    invoke<boolean>("check_accessibility")
+      .then(setAccessibilityGranted)
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -71,7 +75,7 @@ function App() {
   const loadSnippets = useCallback(async (showLoader = true) => {
     if (showLoader) setLoading(true);
     try {
-      const data = await backend.getSnippets();
+      const data = await invoke<Snippet[]>("get_snippets");
       setSnippets(data);
     } catch (e) {
       console.error("Failed to load snippets:", e);
@@ -86,7 +90,7 @@ function App() {
 
   const loadFolders = useCallback(async () => {
     try {
-      const data = await backend.getFolders();
+      const data = await invoke<string[]>("get_folders");
       setPersistentFolders(data);
     } catch (e) {
       console.error("Failed to load folders:", e);
@@ -104,7 +108,7 @@ function App() {
 
   const handleSave = async (snippet: Snippet): Promise<string | null> => {
     try {
-      await backend.saveSnippet(snippet);
+      await invoke("save_snippet", { snippet });
       await loadSnippets(false);
       setClosingModal(true);
       setTimeout(() => {
@@ -122,7 +126,7 @@ function App() {
   const handleDelete = async (id: string) => {
     try {
       const deleted = snippets.find((s) => s.id === id);
-      await backend.deleteSnippet(id);
+      await invoke("delete_snippet", { id });
       await loadSnippets(false);
       if (deleted) showToast(`Deleted "${deleted.label}"`, "success");
     } catch (e) {
@@ -156,7 +160,7 @@ function App() {
 
   const persistFolders = async (folders: string[]) => {
     try {
-      await backend.saveFolders(folders);
+      await invoke("save_folders", { folders });
       setPersistentFolders(folders);
     } catch (e) {
       console.error("Failed to save folders:", e);
@@ -172,14 +176,14 @@ function App() {
   const handleRenameFolder = async (oldName: string, newName: string) => {
     try {
       const updatedFolders = persistentFolders.map((f) => f === oldName ? newName : f);
-      await backend.saveFolders(updatedFolders);
+      await invoke("save_folders", { folders: updatedFolders });
       setPersistentFolders(updatedFolders);
 
       const updated = snippets.map((s) => ({
         ...s,
         folder: s.folder === oldName ? newName : s.folder,
       }));
-      await backend.saveAllSnippets(updated);
+      await invoke("save_all_snippets", { snippets: updated });
       await loadSnippets(false);
       if (selectedFolder === oldName) setSelectedFolder(newName);
     } catch (e) {
@@ -190,14 +194,14 @@ function App() {
   const handleDeleteFolder = async (name: string) => {
     try {
       const updatedFolders = persistentFolders.filter((f) => f !== name);
-      await backend.saveFolders(updatedFolders);
+      await invoke("save_folders", { folders: updatedFolders });
       setPersistentFolders(updatedFolders);
 
       const updated = snippets.map((s) => ({
         ...s,
         folder: s.folder === name ? "" : s.folder,
       }));
-      await backend.saveAllSnippets(updated);
+      await invoke("save_all_snippets", { snippets: updated });
       await loadSnippets(false);
       if (selectedFolder === name) setSelectedFolder("");
     } catch (e) {
@@ -278,28 +282,16 @@ function App() {
       </div>
 
       {modalOpen && (
-        <div
-          className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-150 ${
-            closingModal ? "opacity-0" : "opacity-100"
-          }`}
-        >
-          <div className="fixed inset-0 bg-black/60" onClick={handleCloseModal} />
-          <div
-            className={`relative transition-all duration-150 ${
-              closingModal ? "scale-95 opacity-0" : "scale-100 opacity-100"
-            }`}
-          >
-            <SnippetModal
-              snippet={editingSnippet}
-              onSave={handleSave}
-              onClose={handleCloseModal}
-              folders={folderList}
-              defaultFolder={selectedFolder.startsWith("_") ? "" : selectedFolder}
-              snippets={snippets}
-              editingId={editingSnippet?.id ?? null}
-            />
-          </div>
-        </div>
+        <SnippetModal
+          snippet={editingSnippet}
+          onSave={handleSave}
+          onClose={handleCloseModal}
+          folders={folderList}
+          defaultFolder={selectedFolder.startsWith("_") ? "" : selectedFolder}
+          snippets={snippets}
+          editingId={editingSnippet?.id ?? null}
+          closing={closingModal}
+        />
       )}
 
       <ToastContainer toasts={toasts} dismissToast={dismissToast} />

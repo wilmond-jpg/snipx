@@ -13,6 +13,7 @@ interface SnippetModalProps {
   defaultFolder?: string;
   snippets: Snippet[];
   editingId: string | null;
+  closing?: boolean;
 }
 
 export default function SnippetModal({
@@ -23,6 +24,7 @@ export default function SnippetModal({
   defaultFolder = "",
   snippets,
   editingId,
+  closing = false,
 }: SnippetModalProps) {
   const [form, setForm] = useState<Snippet>(snippet ?? { id: "", label: "", shortcut: "", expansion: "", folder: "" });
   const isEdit = snippet !== null;
@@ -102,8 +104,10 @@ export default function SnippetModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-elevated rounded-2xl shadow-modal w-full max-w-lg mx-4 p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div className={`bg-elevated rounded-2xl shadow-modal w-full max-w-lg mx-4 p-6 transition-all duration-150 ${
+        closing ? "scale-95 opacity-0" : "scale-100 opacity-100"
+      }`} onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-semibold text-primary mb-4">
           {isEdit ? "Edit Snippet" : "New Snippet"}
         </h2>
