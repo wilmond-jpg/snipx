@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import * as backend from "./backend";
 import type { Snippet, Settings } from "./types";
 import Sidebar from "./components/Sidebar";
 import SnippetList from "./components/SnippetList";
@@ -40,12 +40,8 @@ function App() {
   }, [settings.theme]);
 
   useEffect(() => {
-    invoke<Settings>("get_settings")
-      .then((s) => setSettings(s))
-      .catch(() => {});
-    invoke<boolean>("check_accessibility")
-      .then(setAccessibilityGranted)
-      .catch(() => {});
+    backend.getSettings().then(setSettings);
+    backend.checkAccessibility().then(setAccessibilityGranted);
   }, []);
 
   useEffect(() => {
@@ -75,7 +71,7 @@ function App() {
   const loadSnippets = useCallback(async (showLoader = true) => {
     if (showLoader) setLoading(true);
     try {
-      const data = await invoke<Snippet[]>("get_snippets");
+      const data = await backend.getSnippets();
       setSnippets(data);
     } catch (e) {
       console.error("Failed to load snippets:", e);
@@ -90,7 +86,7 @@ function App() {
 
   const loadFolders = useCallback(async () => {
     try {
-      const data = await invoke<string[]>("get_folders");
+      const data = await backend.getFolders();
       setPersistentFolders(data);
     } catch (e) {
       console.error("Failed to load folders:", e);
@@ -108,7 +104,7 @@ function App() {
 
   const handleSave = async (snippet: Snippet): Promise<string | null> => {
     try {
-      await invoke("save_snippet", { snippet });
+      await backend.saveSnippet(snippet);
       await loadSnippets(false);
       setClosingModal(true);
       setTimeout(() => {
@@ -126,7 +122,7 @@ function App() {
   const handleDelete = async (id: string) => {
     try {
       const deleted = snippets.find((s) => s.id === id);
-      await invoke("delete_snippet", { id });
+      await backend.deleteSnippet(id);
       await loadSnippets(false);
       if (deleted) showToast(`Deleted "${deleted.label}"`, "success");
     } catch (e) {
@@ -160,7 +156,7 @@ function App() {
 
   const persistFolders = async (folders: string[]) => {
     try {
-      await invoke("save_folders", { folders });
+      await backend.saveFolders(folders);
       setPersistentFolders(folders);
     } catch (e) {
       console.error("Failed to save folders:", e);
@@ -176,14 +172,14 @@ function App() {
   const handleRenameFolder = async (oldName: string, newName: string) => {
     try {
       const updatedFolders = persistentFolders.map((f) => f === oldName ? newName : f);
-      await invoke("save_folders", { folders: updatedFolders });
+      await backend.saveFolders(updatedFolders);
       setPersistentFolders(updatedFolders);
 
       const updated = snippets.map((s) => ({
         ...s,
         folder: s.folder === oldName ? newName : s.folder,
       }));
-      await invoke("save_all_snippets", { snippets: updated });
+      await backend.saveAllSnippets(updated);
       await loadSnippets(false);
       if (selectedFolder === oldName) setSelectedFolder(newName);
     } catch (e) {
@@ -194,14 +190,14 @@ function App() {
   const handleDeleteFolder = async (name: string) => {
     try {
       const updatedFolders = persistentFolders.filter((f) => f !== name);
-      await invoke("save_folders", { folders: updatedFolders });
+      await backend.saveFolders(updatedFolders);
       setPersistentFolders(updatedFolders);
 
       const updated = snippets.map((s) => ({
         ...s,
         folder: s.folder === name ? "" : s.folder,
       }));
-      await invoke("save_all_snippets", { snippets: updated });
+      await backend.saveAllSnippets(updated);
       await loadSnippets(false);
       if (selectedFolder === name) setSelectedFolder("");
     } catch (e) {
