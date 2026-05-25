@@ -18,6 +18,7 @@ use enigo::{Direction, Enigo, Key, Keyboard, Settings as EnigoSettings};
 use foreign_types::ForeignType;
 
 use crate::storage::Snippet;
+use crate::variables;
 
 const MAX_BUFFER_SIZE: usize = 200;
 const ENIGO_EVENT_MARKER: i64 = 100;
@@ -261,12 +262,14 @@ fn handle_trigger(
 }
 
 fn inject_text_expansion(shortcut: &str, expansion: &str) {
+    let resolved = variables::resolve_variables(expansion);
+
     let source = CGEventSource::new(CGEventSourceStateID::Private);
     let src = match &source {
         Ok(s) => s,
         Err(_) => {
             eprintln!("snipx: failed to create CGEventSource, falling back to enigo");
-            return inject_text_expansion_enigo(shortcut, expansion);
+            return inject_text_expansion_enigo(shortcut, &resolved);
         }
     };
 
@@ -281,7 +284,7 @@ fn inject_text_expansion(shortcut: &str, expansion: &str) {
         }
     }
 
-    let utf16: Vec<u16> = expansion.encode_utf16().collect();
+    let utf16: Vec<u16> = resolved.text.encode_utf16().collect();
     if let Ok(ev) = CGEvent::new_keyboard_event(src.clone(), 0, true) {
         ev.set_string_from_utf16_unchecked(&utf16);
         ev.set_integer_value_field(EventField::EVENT_SOURCE_USER_DATA, ENIGO_EVENT_MARKER);
@@ -292,9 +295,24 @@ fn inject_text_expansion(shortcut: &str, expansion: &str) {
         ev.set_integer_value_field(EventField::EVENT_SOURCE_USER_DATA, ENIGO_EVENT_MARKER);
         ev.post(CGEventTapLocation::HID);
     }
+
+    if let Some(cursor_offset) = resolved.cursor_utf16_offset {
+        let total = utf16.len();
+        let steps = total.saturating_sub(cursor_offset);
+        for _ in 0..steps {
+            if let Ok(ev) = CGEvent::new_keyboard_event(src.clone(), KeyCode::LEFT_ARROW, true) {
+                ev.set_integer_value_field(EventField::EVENT_SOURCE_USER_DATA, ENIGO_EVENT_MARKER);
+                ev.post(CGEventTapLocation::HID);
+            }
+            if let Ok(ev) = CGEvent::new_keyboard_event(src.clone(), KeyCode::LEFT_ARROW, false) {
+                ev.set_integer_value_field(EventField::EVENT_SOURCE_USER_DATA, ENIGO_EVENT_MARKER);
+                ev.post(CGEventTapLocation::HID);
+            }
+        }
+    }
 }
 
-fn inject_text_expansion_enigo(shortcut: &str, expansion: &str) {
+fn inject_text_expansion_enigo(shortcut: &str, resolved: &variables::ResolvedText) {
     ENIGO.with(|cell| {
         let mut guard = cell.borrow_mut();
         if guard.is_none() {
@@ -306,8 +324,17 @@ fn inject_text_expansion_enigo(shortcut: &str, expansion: &str) {
                     eprintln!("snipx: backspace failed: {e}");
                 }
             }
-            if let Err(e) = enigo.text(expansion) {
+            if let Err(e) = enigo.text(&resolved.text) {
                 eprintln!("snipx: text injection failed: {e}");
+            }
+            if let Some(cursor_offset) = resolved.cursor_utf16_offset {
+                let total = resolved.text.encode_utf16().count();
+                let steps = total.saturating_sub(cursor_offset);
+                for _ in 0..steps {
+                    if let Err(e) = enigo.key(Key::LeftArrow, Direction::Click) {
+                        eprintln!("snipx: left arrow failed: {e}");
+                    }
+                }
             }
         } else {
             eprintln!("snipx: enigo initialization failed — text injection unavailable");

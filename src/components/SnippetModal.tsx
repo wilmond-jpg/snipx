@@ -37,6 +37,7 @@ export default function SnippetModal({
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [showVariables, setShowVariables] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -136,6 +137,42 @@ export default function SnippetModal({
             placeholder="e.g. john@example.com"
             charCount={form.expansion.length}
           />
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowVariables(!showVariables)}
+              className="text-xs text-muted hover:text-primary transition-colors select-none flex items-center gap-1"
+            >
+              <svg className={`w-3 h-3 transition-transform ${showVariables ? "rotate-90" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              Available Variables
+            </button>
+            {showVariables && (
+              <div className="mt-2 space-y-1.5 text-xs text-muted">
+                <div className="flex gap-3">
+                  <code className="text-accent shrink-0 font-mono">{`{{date}}`}</code>
+                  <span>Current date (e.g. 2026-05-26)</span>
+                </div>
+                <div className="flex gap-3">
+                  <code className="text-accent shrink-0 font-mono">{`{{time}}`}</code>
+                  <span>Current time (e.g. 14:30)</span>
+                </div>
+                <div className="flex gap-3">
+                  <code className="text-accent shrink-0 font-mono">{`{{datetime}}`}</code>
+                  <span>Current date and time</span>
+                </div>
+                <div className="flex gap-3">
+                  <code className="text-accent shrink-0 font-mono">{`{{clipboard}}`}</code>
+                  <span>Pastes clipboard content</span>
+                </div>
+                <div className="flex gap-3">
+                  <code className="text-accent shrink-0 font-mono">{`{{cursor}}`}</code>
+                  <span>Cursor position after expansion</span>
+                </div>
+              </div>
+            )}
+          </div>
           <Select label="Folder" value={form.folder} onChange={set("folder")}>
             <option value="">None</option>
             {folders.filter(f => f).map((f) => (
