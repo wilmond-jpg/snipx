@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SnipX — Type less. Expand more.</title>
+  <meta name="description" content="SnipX is a Mac text expander that inserts templates, snippets, and macros anywhere with a keyboard shortcut.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ===== RESET & GLOBAL ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; background: #0A0A0A; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: #F0F0EE;
+      background: #0A0A0A;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    a { text-decoration: none; color: inherit; }
+    ::selection { background: rgba(45,212,191,0.3); }
+
+    /* ===== REUSABLE ===== */
+    .section-label {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #2DD4BF;
+      margin-bottom: 8px;
+    }
+    .section-heading {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: clamp(28px, 3vw, 40px);
+      color: #F0F0EE;
+      margin-bottom: 40px;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #2DD4BF;
+      color: #0A0A0A;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      border-radius: 10px;
+      padding: 14px 28px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .btn-primary:hover { background: #25B8A5; }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: #F0F0EE;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      border-radius: 10px;
+      padding: 14px 28px;
+      border: 1px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+      transition: border-color 0.2s ease, color 0.2s ease;
+    }
+    .btn-secondary:hover { border-color: #2DD4BF; color: #2DD4BF; }
+
+    .cyan { color: #2DD4BF; }
+    .gold { color: #F5C518; }
+    .muted { color: #888884; }
+
+    .code-inline {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: #2DD4BF;
+      background: rgba(45,212,191,0.1);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+
+    section { padding: 80px 24px; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+
+    /* ===== FADE-UP ANIMATION ===== */
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up {
+      opacity: 0;
+      transform: translateY(18px);
+      animation: fadeUp 0.6s ease forwards;
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.35s; }
+    .delay-4 { animation-delay: 0.5s; }
+    .delay-5 { animation-delay: 0.6s; }
+    .delay-6 { animation-delay: 0.75s; }
+
+    /* ===== NAVIGATION ===== */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 100;
+      background: rgba(10,10,10,0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      height: 64px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .nav-left svg { display: block; }
+    .nav-wordmark {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.03em;
+      color: #F0F0EE;
+    }
+    .nav-center {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+    .nav-center a {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      font-size: 14px;
+      color: #888884;
+      transition: color 0.2s ease;
+    }
+    .nav-center a:hover { color: #2DD4BF; }
+    .nav-download {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      background: #2DD4BF;
+      color: #0A0A0A;
+      padding: 8px 20px;
+      border-radius: 8px;
+      transition: background 0.2s ease;
+    }
+    .nav-download:hover { background: #25B8A5; }
+
+    /* ===== HERO ===== */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-top: 64px;
+      text-align: center;
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+    #hero > * { max-width: 800px; }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      font-size: 13px;
+      color: #2DD4BF;
+      background: rgba(45,212,191,0.12);
+      padding: 6px 16px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #2DD4BF;
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(45,212,191,0.6); }
+      50% { box-shadow: 0 0 0 6px rgba(45,212,191,0); }
+    }
+
+    #hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(36px, 5.5vw, 72px);
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+      margin-bottom: 20px;
+    }
+    #hero h1 .line1 { color: #F0F0EE; }
+    #hero h1 .line2 { color: #2DD4BF; }
+    #hero h1 .line3 { color: #F5C518; }
+
+    .hero-sub {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: clamp(16px, 1.5vw, 19px);
+      color: #888884;
+      line-height: 1.6;
+      max-width: 600px;
+      margin-bottom: 32px;
+    }
+
+    .hero-ctas {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .hero-note {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: 12px;
+      color: #888884;
+      margin-bottom: 48px;
+    }
+
+    /* ===== DEMO WINDOW ===== */
+    .demo-window {
+      width: 100%;
+      max-width: 560px;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0D0D0D;
+    }
+    .demo-chrome {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #1A1A1A;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .demo-chrome .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .demo-chrome .dot.red { background: #FF5F57; }
+    .demo-chrome .dot.yellow { background: #FEBC2E; }
+    .demo-chrome .dot.green { background: #28C840; }
+
+    .demo-body {
+      padding: 20px 24px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #F0F0EE;
+      min-height: 100px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .demo-prompt {
+      color: #5EEAD4;
+      opacity: 0.5;
+      margin-right: 4px;
+    }
+    .demo-text {
+      white-space: pre;
+    }
+    .demo-cursor {
+      animation: cursorBlink 1s step-end infinite;
+      color: #F0F0EE;
+      font-weight: 300;
+      margin-left: 1px;
+    }
+    @keyframes cursorBlink {
+      50% { opacity: 0; }
+    }
+    .demo-expand {
+      color: #F5C518;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      margin-left: 8px;
+    }
+    .demo-expand.visible { opacity: 1; }
+
+    /* ===== STATS ===== */
+    #stats {
+      border-top: 1px solid rgba(255,255,255,0.07);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      padding: 48px 24px;
+    }
+    .stats-row {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .stat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      max-width: 240px;
+    }
+    .stat-number {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(28px, 3vw, 36px);
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+    }
+    .stat-label {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: 14px;
+      color: #888884;
+      margin-top: 4px;
+    }
+
+    /* ===== FEATURES ===== */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid rgba(255,255,255,0.07);
+      border-left: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .feature-card {
+      padding: 32px;
+      border-right: 1px solid rgba(255,255,255,0.07);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      transition: background 0.2s ease;
+    }
+    .feature-card:hover { background: rgba(255,255,255,0.02); }
+    .feature-card:nth-child(3n) { border-right: none; }
+    .feature-card:nth-last-child(-n+3) { border-bottom: none; }
+    .feature-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .feature-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+      color: #F0F0EE;
+    }
+    .feature-card p {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #888884;
+    }
+
+    /* ===== HOW IT WORKS ===== */
+    .steps-row {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+    }
+    .step-card {
+      flex: 1;
+      max-width: 320px;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 32px;
+      position: relative;
+    }
+    .step-number {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 48px;
+      color: #F0F0EE;
+      opacity: 0.12;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .step-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+      color: #F0F0EE;
+    }
+    .step-card p {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #888884;
+    }
+
+    /* ===== EXAMPLES ===== */
+    .examples-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    .example-card {
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 24px;
+      transition: border-color 0.2s ease;
+    }
+    .example-card:hover { border-color: rgba(45,212,191,0.3); }
+    .example-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .example-shortcut {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      color: #2DD4BF;
+      background: rgba(45,212,191,0.15);
+      padding: 4px 12px;
+      border-radius: 6px;
+    }
+    .example-label {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      font-size: 14px;
+      color: #888884;
+    }
+    .example-body {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #F0F0EE;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .example-body .placeholder {
+      color: #5EEAD4;
+    }
+    .example-note {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      color: #888884;
+      margin-top: 8px;
+    }
+
+    /* ===== CTA ===== */
+    #cta {
+      background: #111111;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    #cta .section-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .cta-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(45,212,191,0.1), transparent);
+      filter: blur(60px);
+      pointer-events: none;
+    }
+    #cta h2 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: clamp(28px, 3.5vw, 44px);
+      letter-spacing: -0.03em;
+      color: #F0F0EE;
+      margin-bottom: 12px;
+    }
+    .cta-sub {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: 16px;
+      color: #888884;
+      margin-bottom: 32px;
+    }
+    #cta .btn-primary {
+      font-size: 15px;
+      padding: 16px 36px;
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      border-top: 1px solid rgba(255,255,255,0.07);
+      padding: 32px 24px;
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      color: #888884;
+    }
+    .footer-center {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      font-size: 13px;
+      color: #888884;
+    }
+    .footer-right {
+      display: flex;
+      gap: 20px;
+    }
+    .footer-right a {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      font-size: 13px;
+      color: #888884;
+      transition: color 0.2s ease;
+    }
+    .footer-right a:hover { color: #F0F0EE; }
+
+    /* ===== RESPONSIVE (BASIC) ===== */
+    @media (max-width: 900px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .feature-card:nth-child(2n) { border-right: none; }
+      .feature-card:nth-child(3n) { border-right: 1px solid rgba(255,255,255,0.07); }
+      .feature-card:nth-last-child(-n+3) { border-bottom: 1px solid rgba(255,255,255,0.07); }
+      .feature-card:nth-last-child(-n+2) { border-bottom: none; }
+
+      .steps-row { flex-direction: column; align-items: center; }
+      .step-card { max-width: 100%; }
+
+      .examples-grid { grid-template-columns: 1fr; }
+
+      .stats-row { flex-wrap: wrap; gap: 24px; }
+      .stat { flex: 0 0 50%; max-width: 50%; }
+
+      .hero-ctas { flex-direction: column; }
+    }
+    @media (max-width: 600px) {
+      .features-grid { grid-template-columns: 1fr; }
+      .feature-card:nth-child(2n) { border-right: none; }
+      .feature-card:nth-child(3n) { border-right: none; }
+
+      nav { height: auto; padding: 12px 0; }
+      .nav-inner { flex-wrap: wrap; gap: 8px; justify-content: center; }
+      .nav-center { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAVIGATION ===== -->
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-left">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="14" cy="16" r="11" fill="#2DD4BF"/>
+          <circle cx="18" cy="16" r="11" fill="#F5C518"/>
+          <circle cx="14" cy="16" r="3.5" fill="#F5C518"/>
+          <circle cx="18" cy="16" r="3.5" fill="#2DD4BF"/>
+        </svg>
+        <span class="nav-wordmark">SnipX</span>
+      </div>
+      <div class="nav-center">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="#examples">Examples</a>
+      </div>
+      <a href="#" class="nav-download">Download for Mac</a>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <section id="hero">
+    <div class="hero-badge fade-up delay-1">
+      <span class="pulse-dot"></span>
+      Now available for macOS
+    </div>
+    <h1 class="fade-up delay-2">
+      <span class="line1">Type less.</span><br>
+      <span class="line2">/ Expand more.</span><br>
+      <span class="line3">Ship faster.</span>
+    </h1>
+    <p class="hero-sub fade-up delay-3">
+      Create shortcuts for your most-used text. Insert them anywhere on your Mac — email, code, docs, chat. Instant.
+    </p>
+    <div class="hero-ctas fade-up delay-4">
+      <a href="#" class="btn-primary">
+        <svg width="16" height="16" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14.942 6.262c-.086.066-1.602.936-1.602 2.858 0 2.233 1.94 3.025 2.002 3.044-.01.044-.307 1.094-1.008 2.174-.621.96-1.271 1.919-2.275 1.919-.991 0-1.268-.584-2.374-.584-1.116 0-1.496.594-2.385.594-.89 0-1.53-.915-2.183-1.93C4.464 13.45 3.76 11.41 3.76 9.514c0-2.945 1.902-4.508 3.775-4.508.998 0 1.823.654 2.448.654.614 0 1.562-.676 2.667-.676.44 0 .887.015 1.336.082.082.01.164.02.242.033.315.05.496.203.544.308.05.106.05.226.017.346a.276.276 0 01-.036.09c-.008.013-.019.027-.03.042l-.114.157zM12.18 2.824c.448-.536.78-1.277.78-2.018 0-.099-.008-.199-.024-.296a3.12 3.12 0 00-.637.066c-.998.205-1.77.736-2.314 1.376-.397.466-.756 1.215-.756 1.98 0 .102.01.204.028.303a1.35 1.35 0 00.243-.015c.484-.087 1.073-.438 1.621-1.014.155-.161.815-.842 1.06-1.382z" fill="currentColor"/>
+        </svg>
+        Download for Mac — Free
+      </a>
+      <a href="#demo" class="btn-secondary">See it in action →</a>
+    </div>
+    <p class="hero-note fade-up delay-5">Requires macOS 14 or later</p>
+
+    <!-- DEMO WINDOW -->
+    <div class="demo-window fade-up delay-6" id="demo">
+      <div class="demo-chrome">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+      </div>
+      <div class="demo-body">
+        <span class="demo-prompt">$</span>
+        <span class="demo-text" id="demo-text"></span>
+        <span class="demo-cursor" id="demo-cursor">|</span>
+        <span class="demo-expand" id="demo-expand">✦ Expanding...</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== STATS ===== -->
+  <section id="stats">
+    <div class="stats-row">
+      <div class="stat">
+        <span class="stat-number cyan">10×</span>
+        <span class="stat-label">faster repetitive writing</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number gold">500+</span>
+        <span class="stat-label">snippets supported</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number" style="color:#F0F0EE">Any app</span>
+        <span class="stat-label">works system-wide on Mac</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number cyan">0ms</span>
+        <span class="stat-label">expansion delay</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURES ===== -->
+  <section id="features">
+    <div class="section-inner">
+      <div class="section-label">Features</div>
+      <h2 class="section-heading">Everything your typing needed.</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(45,212,191,0.12)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/>
+            </svg>
+          </div>
+          <h3>Keyboard shortcuts</h3>
+          <p>Type a short trigger like <span class="code-inline">;email</span> to insert entire paragraphs. Your fingers never leave the keyboard.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(245,197,24,0.12)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F5C518" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </div>
+          <h3>Rich templates</h3>
+          <p>Templates with <span class="code-inline">{placeholders}</span> for names, dates, and dynamic content that adapt every time.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(45,212,191,0.12)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+          </div>
+          <h3>Smart macros</h3>
+          <p>Auto-insert today's date, clipboard content, or cursor position with <span class="code-inline">{{date}}</span> and <span class="code-inline">{{clipboard}}</span>.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(245,197,24,0.12)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F5C518" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+          </div>
+          <h3>Works everywhere</h3>
+          <p>System-wide expansion in VS Code, Slack, Mail, Safari, Figma — any app you use on your Mac.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(45,212,191,0.12)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a10 10 0 0 1 10 10c0 3.3-2 6.2-5 7.4V18a3 3 0 0 0-3-3h-4a3 3 0 0 0-3 3v1.4A10 10 0 0 1 2 12 10 10 0 0 1 12 2z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+          <h3>iCloud sync</h3>
+          <p>Your snippets sync seamlessly across Macs via iCloud. Always up to date, everywhere you work.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(245,197,24,0.12)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F5C518" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+          <h3>100% private</h3>
+          <p>All data stays on your machine. No tracking, no analytics, no cloud processing. Your snippets belong to you.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HOW IT WORKS ===== -->
+  <section id="how-it-works">
+    <div class="section-inner">
+      <div class="section-label">How it works</div>
+      <h2 class="section-heading">Three steps to never typing the same thing twice.</h2>
+      <div class="steps-row">
+        <div class="step-card">
+          <div class="step-number">01</div>
+          <h3>Create a snippet</h3>
+          <p>Write it once. Assign a trigger like <span class="code-inline">;email</span>. Done.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">02</div>
+          <h3>Type the shortcut</h3>
+          <p>In any app — Mail, VS Code, Slack, Safari — type <span class="code-inline">;email</span>.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">03</div>
+          <h3>Watch it expand</h3>
+          <p>Instantly replaced with your full text. Templates, dates, dynamic content — all automatic.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SNIPPET EXAMPLES ===== -->
+  <section id="examples">
+    <div class="section-inner">
+      <div class="section-label">Snippet examples</div>
+      <h2 class="section-heading">Your most-used text, one shortcut away.</h2>
+      <div class="examples-grid">
+        <div class="example-card">
+          <div class="example-header">
+            <span class="example-shortcut">;intro</span>
+            <span class="example-label">Email intro</span>
+          </div>
+          <div class="example-body">Hi <span class="placeholder">{name}</span>,
+
+Thanks for reaching out about <span class="placeholder">{topic}</span>. I'd be happy to help.
+
+Let me look into this and get back to you by end of day.
+
+Best,
+Wilmond</div>
+        </div>
+        <div class="example-card">
+          <div class="example-header">
+            <span class="example-shortcut">;date</span>
+            <span class="example-label">Dynamic date</span>
+          </div>
+          <div class="example-body">Today's date: <span id="demo-date" style="color:#5EEAD4">Monday, May 26, 2026</span></div>
+          <div class="example-note">← auto-filled every time</div>
+        </div>
+        <div class="example-card">
+          <div class="example-header">
+            <span class="example-shortcut">;lgtm</span>
+            <span class="example-label">Code review</span>
+          </div>
+          <div class="example-body">LGTM! A few nits but nothing blocking.
+
+• The approach looks solid
+• Tests are passing
+• No regressions introduced
+
+Ship it. 🚀</div>
+        </div>
+        <div class="example-card">
+          <div class="example-header">
+            <span class="example-shortcut">;ooo</span>
+            <span class="example-label">Out of office</span>
+          </div>
+          <div class="example-body">Hi,
+
+I'm out of the office until <span class="placeholder">{return_date}</span>.
+
+For urgent matters, please contact <span class="placeholder">{backup_contact}</span>.
+
+I'll respond to your message as soon as I'm back.
+
+Best,</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA ===== -->
+  <section id="cta">
+    <div class="cta-glow"></div>
+    <div class="section-inner">
+      <div class="section-label">Get started</div>
+      <h2>Stop retyping. Start flying.</h2>
+      <p class="cta-sub">Join thousands of Mac users who type less and ship faster.</p>
+      <a href="#" class="btn-primary">
+        <svg width="16" height="16" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14.942 6.262c-.086.066-1.602.936-1.602 2.858 0 2.233 1.94 3.025 2.002 3.044-.01.044-.307 1.094-1.008 2.174-.621.96-1.271 1.919-2.275 1.919-.991 0-1.268-.584-2.374-.584-1.116 0-1.496.594-2.385.594-.89 0-1.53-.915-2.183-1.93C4.464 13.45 3.76 11.41 3.76 9.514c0-2.945 1.902-4.508 3.775-4.508.998 0 1.823.654 2.448.654.614 0 1.562-.676 2.667-.676.44 0 .887.015 1.336.082.082.01.164.02.242.033.315.05.496.203.544.308.05.106.05.226.017.346a.276.276 0 01-.036.09c-.008.013-.019.027-.03.042l-.114.157zM12.18 2.824c.448-.536.78-1.277.78-2.018 0-.099-.008-.199-.024-.296a3.12 3.12 0 00-.637.066c-.998.205-1.77.736-2.314 1.376-.397.466-.756 1.215-.756 1.98 0 .102.01.204.028.303a1.35 1.35 0 00.243-.015c.484-.087 1.073-.438 1.621-1.014.155-.161.815-.842 1.06-1.382z" fill="currentColor"/>
+        </svg>
+        Download for Mac — Free
+      </a>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-left">
+        <svg width="18" height="18" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="14" cy="16" r="11" fill="#2DD4BF"/>
+          <circle cx="18" cy="16" r="11" fill="#F5C518"/>
+          <circle cx="14" cy="16" r="3.5" fill="#F5C518"/>
+          <circle cx="18" cy="16" r="3.5" fill="#2DD4BF"/>
+        </svg>
+        SnipX
+      </div>
+      <div class="footer-center">© 2026 SnipX. All rights reserved.</div>
+      <div class="footer-right">
+        <a href="#">Privacy</a>
+        <a href="#">Support</a>
+        <a href="#">Twitter</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    /* ===== TYPING DEMO ===== */
+    document.addEventListener('DOMContentLoaded', function() {
+      var demoText = document.getElementById('demo-text');
+      var demoCursor = document.getElementById('demo-cursor');
+      var demoExpand = document.getElementById('demo-expand');
+
+      var shortcut = ';meeting';
+      var expansion = 'Quick sync — Mon 26 May\nAgenda:\n- [ ] Review sprint progress\n- [ ] Discuss blockers\n- [ ] Plan next steps';
+      var typingSpeed = 60;
+      var expandDuration = 700;
+      var revealSpeed = 20;
+      var pauseDuration = 4000;
+      var timer = null;
+      var running = true;
+
+      function clearTimers() {
+        if (timer) { clearTimeout(timer); timer = null; }
+      }
+
+      function typeChars(chars, i, speed, cb) {
+        if (!running) return;
+        if (i >= chars.length) { if (cb) cb(); return; }
+        demoText.textContent += chars[i];
+        timer = setTimeout(function() { typeChars(chars, i + 1, speed, cb); }, speed);
+      }
+
+      function showExpand() { demoExpand.classList.add('visible'); }
+
+      function hideExpand(cb) {
+        demoExpand.classList.remove('visible');
+        if (cb) setTimeout(cb, 50);
+      }
+
+      function pause(ms, cb) {
+        timer = setTimeout(function() { if (cb) cb(); }, ms);
+      }
+
+      function reset() {
+        demoText.textContent = '';
+        demoCursor.style.display = '';
+      }
+
+      function startLoop() {
+        if (!running) return;
+        reset();
+
+        // Phase 1: Type shortcut
+        typeChars(shortcut, 0, typingSpeed, function() {
+          if (!running) return;
+
+          // Phase 2: Show expanding flash
+          showExpand();
+          timer = setTimeout(function() {
+            if (!running) return;
+            hideExpand(function() {
+              if (!running) return;
+
+              // Phase 3: Reveal expansion
+              typeChars(expansion, 0, revealSpeed, function() {
+                if (!running) return;
+
+                // Phase 4: Pause, then loop
+                demoCursor.style.display = 'none';
+                timer = setTimeout(function() {
+                  if (running) startLoop();
+                }, pauseDuration);
+              });
+            });
+          }, expandDuration);
+        });
+      }
+
+      startLoop();
+
+      /* ===== DYNAMIC DATE ===== */
+      var dateEl = document.getElementById('demo-date');
+      if (dateEl) {
+        var d = new Date();
+        dateEl.textContent = d.toLocaleDateString('en-US', {
+          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+      }
+    });
+  </script>
+</body>
+</html>
